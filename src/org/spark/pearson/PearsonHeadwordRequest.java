@@ -3,7 +3,9 @@ package org.spark.pearson;
 import java.util.HashMap;
 import java.util.List;
 
-public class PearsonHeadwordRequest extends AbstractPearsonRequest {
+import org.spark.util.AbstractRequest;
+
+public class PearsonHeadwordRequest extends AbstractRequest {
 
 	private static final String KEY_PEARSON_HEAD_WORD = "headword";
 	

@@ -1,12 +1,18 @@
 package org.spark.util;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class SparkUtils {
 	/**
@@ -171,9 +177,9 @@ public class SparkUtils {
 				firstIndex++;
 			}
 		}
-		
+
 		isBlank = false;
-		
+
 		int endIndex = text.length();
 
 		if (text.length() >= 1) {
@@ -195,9 +201,9 @@ public class SparkUtils {
 		}
 		return text.substring(firstIndex, endIndex);
 	}
-	
+
 	/**
-	 * enumerate the texts and return all combinations. 
+	 * enumerate the texts and return all combinations.
 	 * 
 	 * @param texts
 	 * @return
@@ -208,24 +214,24 @@ public class SparkUtils {
 		enumerate(0, new ArrayList<String>());
 		return result;
 	}
-	
+
 	static List<List<String>> enums = null;
 	static List<List<String>> result = null;
-	
+
 	private static void enumerate(int currentIndex, List<String> temp) {
-		
+
 		if (currentIndex > enums.size() - 1) {
 			result.add(temp);
 			return;
 		}
-		
+
 		for (String text : enums.get(currentIndex)) {
 			temp.add(text);
 			enumerate(currentIndex + 1, new ArrayList<String>(temp));
 			temp.remove(text);
 		}
 	}
-	
+
 	public static boolean isPhrase(String token) {
 		boolean wordStart = false;
 		boolean blank = false;
@@ -245,8 +251,111 @@ public class SparkUtils {
 		}
 		return false;
 	}
+
+	/**
+	 * unzip a zip file and write it to the output directory
+	 * 
+	 * @param zipFilePath
+	 * @param outputDir
+	 */
+	public static void unzipFile(String zipFilePath, String outputDir) {
+		byte[] buffer = new byte[1024];
+		try {
+			// create output directory is not exists
+			File folder = new File(outputDir);
+			if (!folder.exists()) {
+				folder.mkdir();
+			}
+
+//			getLogger().info("zip file : " + zipFilePath);
+			
+			// get the zip file content
+			ZipInputStream zis = new ZipInputStream(new FileInputStream(
+					zipFilePath));
+			// get the zipped file list entry
+			ZipEntry ze = zis.getNextEntry();
+			
+			while (ze != null) {
+
+				String fileName = ze.getName();
+				File newFile = new File(outputDir + File.separator + fileName);
+				
+				if (newFile.exists()) {
+					continue;
+				}
+				getLogger().info("file unzipped : " + newFile.getAbsolutePath());
+
+				// create all non exists folders
+				// else you will hit FileNotFoundException for compressed folder
+				new File(newFile.getParent()).mkdirs();
+
+				FileOutputStream fos = new FileOutputStream(newFile);
+
+				int len;
+				while ((len = zis.read(buffer)) > 0) {
+					fos.write(buffer, 0, len);
+				}
+
+				fos.close();
+				ze = zis.getNextEntry();
+			}
+
+			zis.closeEntry();
+			zis.close();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	public static boolean isZipFile(String fileName) {
+		if (fileName != null) {
+			if (fileName.endsWith(".zip")) {
+				return true;
+			}
+		}
+		return false;
+	}
 	
-	public static void main(String[] args) {
-		System.out.println(isPhrase("   hahah   h   "));;
+	public static void combineFiles(String dir, String outputTxt) throws IOException {
+		File directory = new File(dir);
+		File file = new File(outputTxt);
+		if (!file.exists()) {
+			file.createNewFile();
+		}
+		File[] files = directory.listFiles();
+		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+		for (File f : files) {
+			if (f.isFile()) {
+				getLogger().info("file name : " + f.getAbsolutePath());
+				BufferedReader br = new BufferedReader(new FileReader(f));
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					bw.write(line);
+					bw.write("\n");
+				}
+				br.close();
+			} else if (f.isDirectory()) {
+				recur(f, bw);
+			}
+		}
+		bw.close();
+	}
+
+	private static void recur(File dir, BufferedWriter bw) throws IOException {
+		File[] files = dir.listFiles();
+		for (File f : files) {
+			if (f.isFile()) {
+				getLogger().info("file name : " + f.getAbsolutePath());
+				BufferedReader br = new BufferedReader(new FileReader(f));
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					bw.write(line);
+					bw.write("\n");
+				}
+				br.close();
+			} else if (f.isDirectory()) {
+				recur(f, bw);
+			}
+		}
 	}
 }
