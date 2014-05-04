@@ -14,6 +14,8 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.spark.gutenberg.GutenbergCrawlerHelper;
+
 public class SparkUtils {
 	/**
 	 * get the Spark Logger
@@ -267,23 +269,27 @@ public class SparkUtils {
 				folder.mkdir();
 			}
 
-//			getLogger().info("zip file : " + zipFilePath);
-			
+			// getLogger().info("zip file : " + zipFilePath);
+
 			// get the zip file content
 			ZipInputStream zis = new ZipInputStream(new FileInputStream(
 					zipFilePath));
 			// get the zipped file list entry
 			ZipEntry ze = zis.getNextEntry();
-			
+
 			while (ze != null) {
 
 				String fileName = ze.getName();
 				File newFile = new File(outputDir + File.separator + fileName);
-				
+
 				if (newFile.exists()) {
+					ze = zis.getNextEntry();
+					getLogger().info(
+							"file exists : " + newFile.getAbsolutePath());
 					continue;
 				}
-				getLogger().info("file unzipped : " + newFile.getAbsolutePath());
+				getLogger()
+						.info("file unzipped : " + newFile.getAbsolutePath());
 
 				// create all non exists folders
 				// else you will hit FileNotFoundException for compressed folder
@@ -297,7 +303,6 @@ public class SparkUtils {
 				}
 
 				fos.close();
-				ze = zis.getNextEntry();
 			}
 
 			zis.closeEntry();
@@ -315,8 +320,18 @@ public class SparkUtils {
 		}
 		return false;
 	}
-	
-	public static void combineFiles(String dir, String outputTxt) throws IOException {
+
+	public static boolean isTxtFile(String fileName) {
+		if (fileName != null) {
+			if (fileName.endsWith(".txt")) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static void combineFiles(String dir, String outputTxt)
+			throws IOException {
 		File directory = new File(dir);
 		File file = new File(outputTxt);
 		if (!file.exists()) {
@@ -325,15 +340,13 @@ public class SparkUtils {
 		File[] files = directory.listFiles();
 		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 		for (File f : files) {
-			if (f.isFile()) {
+			if (f.isFile() && isTxtFile(f.getName())) {
 				getLogger().info("file name : " + f.getAbsolutePath());
-				BufferedReader br = new BufferedReader(new FileReader(f));
-				String line = null;
-				while ((line = br.readLine()) != null) {
-					bw.write(line);
+				List<String> sentences = CoreNLPHelper.getHelper().sentencesFromText(f.getAbsolutePath());
+				for (String sentence : sentences) {
+					bw.write(sentence.toLowerCase());
 					bw.write("\n");
 				}
-				br.close();
 			} else if (f.isDirectory()) {
 				recur(f, bw);
 			}
@@ -344,18 +357,42 @@ public class SparkUtils {
 	private static void recur(File dir, BufferedWriter bw) throws IOException {
 		File[] files = dir.listFiles();
 		for (File f : files) {
-			if (f.isFile()) {
+			if (f.isFile() && isTxtFile(f.getName())) {
 				getLogger().info("file name : " + f.getAbsolutePath());
-				BufferedReader br = new BufferedReader(new FileReader(f));
-				String line = null;
-				while ((line = br.readLine()) != null) {
-					bw.write(line);
+				List<String> sentences = CoreNLPHelper.getHelper().sentencesFromText(f.getAbsolutePath());
+				for (String sentence : sentences) {
+					bw.write(sentence.toLowerCase());
 					bw.write("\n");
-				}
-				br.close();
+				}				
 			} else if (f.isDirectory()) {
 				recur(f, bw);
 			}
 		}
 	}
+
+	public static void unzipFiles(String dir, String outputDir)
+			throws IOException {
+		File directory = new File(dir);
+		File[] files = directory.listFiles();
+		for (File f : files) {
+			if (f.isFile()) {
+				// getLogger().info("file name : " + f.getAbsolutePath());
+				unzipFile(f.getAbsolutePath(), outputDir);
+			} else if (f.isDirectory()) {
+				recur(f, outputDir);
+			}
+		}
+	}
+
+	private static void recur(File dir, String outputDir) throws IOException {
+		File[] files = dir.listFiles();
+		for (File f : files) {
+			if (f.isFile()) {
+				unzipFile(f.getAbsolutePath(), outputDir);
+			} else if (f.isDirectory()) {
+				recur(f, outputDir);
+			}
+		}
+	}
+
 }

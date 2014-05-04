@@ -15,7 +15,7 @@ import org.spark.util.SparkUtils;
 
 public class GutenbergCrawlerHelper {
 	static final ExecutorService EXECUTOR_SERVICE = Executors
-			.newFixedThreadPool(100);
+			.newFixedThreadPool(1000);
 
 	static BufferedWriter downloadedUrlWriter;
 
@@ -24,6 +24,22 @@ public class GutenbergCrawlerHelper {
 	static HashSet<String> failedUrls;
 
 	static BufferedWriter failedUrlWriter;
+
+	static HashSet<String> unzippedFiles;
+
+	static void unzipInit() {
+		unzippedFiles = new HashSet<String>();
+		File dir = new File(GutenbergCrawler.GUTENBERG_TXT_DIR);
+		File[] files = dir.listFiles();
+		for (File file : files) {
+			int index = file.getName().lastIndexOf(".");
+			String name = file.getName();
+			if (index != -1) {
+				name = file.getName().substring(0, index);
+			}
+			unzippedFiles.add(name);
+		}
+	}
 
 	static void init() throws IOException {
 		File downloadedUrlRecord = new File("gutenberg/url2.txt");
@@ -93,7 +109,7 @@ public class GutenbergCrawlerHelper {
 			}
 		});
 	}
-	
+
 	static void downloadFailedFile(final String url) throws IOException {
 
 		synchronized (downloadedUrls) {
@@ -108,7 +124,7 @@ public class GutenbergCrawlerHelper {
 				}
 			}
 		}
-		
+
 		EXECUTOR_SERVICE.execute(new Runnable() {
 
 			@Override
@@ -139,13 +155,27 @@ public class GutenbergCrawlerHelper {
 		});
 	}
 
-	static void unzipFiles(final String url) throws IOException {
+	static void unzipFiles(final File file) throws IOException {
 
 		EXECUTOR_SERVICE.execute(new Runnable() {
 
 			@Override
 			public void run() {
-				SparkUtils.unzipFile(url, GutenbergCrawler.GUTENBERG_TXT_DIR);
+				int index = file.getName().lastIndexOf(".");
+				String name = file.getName();
+				if (index != -1) {
+					name = file.getName().substring(0, index);
+				}
+				synchronized (GutenbergCrawlerHelper.unzippedFiles) {
+					if (GutenbergCrawlerHelper.unzippedFiles.contains(name)) {
+						return;
+					}
+				}
+				SparkUtils.unzipFile(file.getAbsolutePath(),
+						GutenbergCrawler.GUTENBERG_TXT_DIR);
+				synchronized (unzippedFiles) {
+					unzippedFiles.add(name);
+				}
 			}
 		});
 	}

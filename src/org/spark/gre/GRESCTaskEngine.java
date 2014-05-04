@@ -17,7 +17,7 @@ import org.spark.pearson.PearsonDictionaryHelper;
 import org.spark.pearson.PearsonHeadwordRequest;
 import org.spark.pearson.PearsonHeadwordResponse;
 import org.spark.util.AbstractRequsetListener;
-import org.spark.util.CoreNLPTagger;
+import org.spark.util.CoreNLPHelper;
 import org.spark.util.SparkUtils;
 
 /**
@@ -190,7 +190,7 @@ public class GRESCTaskEngine {
 			
 			if (singleWord.size() > 0) {
 				String dictSentence = String.format(sentence, allWord.toArray());
-				List<String> singleWordTags = CoreNLPTagger.getTagger().tag(dictSentence, singleWord);
+				List<String> singleWordTags = CoreNLPHelper.getHelper().tag(dictSentence, singleWord);
 				List<List<String>> singleWordDefinitions = new ArrayList<List<String>>(); 
 				
 				// iterate the single word list and look up all single word using Pearson Dictionary

@@ -10,28 +10,40 @@ import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
 import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.ling.HasWord;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.process.DocumentPreprocessor;
 import edu.stanford.nlp.util.CoreMap;
 
-public class CoreNLPTagger {
-	private static CoreNLPTagger tagger;
+/**
+ * @author Haoyu
+ *
+ */
+public class CoreNLPHelper {
+	private static CoreNLPHelper tagger;
 
-	public static CoreNLPTagger getTagger() {
+	public static CoreNLPHelper getHelper() {
 		if (tagger == null) {
-			tagger = new CoreNLPTagger();
+			tagger = new CoreNLPHelper();
 		}
 		return tagger;
 	}
-	
+
 	private StanfordCoreNLP posPipeline;
 
-	private CoreNLPTagger() {
+	private CoreNLPHelper() {
 		Properties props = new Properties();
 		props.put("annotators", "tokenize, ssplit, pos");
 		posPipeline = new StanfordCoreNLP(props);
 	}
 
+	/**
+	 * tag the sentence
+	 * 
+	 * @param text
+	 * @return
+	 */
 	public String tag(String text) {
 		Annotation document = new Annotation(text);
 		posPipeline.annotate(document);
@@ -57,9 +69,29 @@ public class CoreNLPTagger {
 		}
 		return builder.toString();
 	}
-	
+
 	/**
-	 * 
+	 * get all sentences from a plain text file
+	 * @param textFilePath
+	 * @return
+	 */
+	public List<String> sentencesFromText(String textFilePath) {
+		List<String> sentences = new ArrayList<String>();
+		DocumentPreprocessor preprocessor = new DocumentPreprocessor(
+				textFilePath);
+		for (List<HasWord> em : preprocessor) {
+			StringBuilder builder = new StringBuilder();
+			for (HasWord word : em) {
+				builder.append(word.word());
+				builder.append(" ");
+			}
+			sentences.add(builder.toString());
+		}
+		return sentences;
+	}
+
+	/**
+	 * predict the pos tag of the blank
 	 * 
 	 * @param sentence
 	 * @param blanks
@@ -85,16 +117,15 @@ public class CoreNLPTagger {
 				index++;
 			}
 		}
-		
+
 		sentence = String.format(sentence, blanks.toArray());
-		System.out.println(sentence.trim());
 		index = 0;
-		
+
 		Annotation document = new Annotation(sentence);
 		posPipeline.annotate(document);
 		List<CoreMap> sentences = document.get(SentencesAnnotation.class);
 		List<String> tags = new ArrayList<String>();
-		
+
 		for (CoreMap tagS : sentences) {
 			for (CoreLabel token : tagS.get(TokensAnnotation.class)) {
 				String word = token.get(TextAnnotation.class);
@@ -120,6 +151,12 @@ public class CoreNLPTagger {
 		return tags;
 	}
 
+	/**
+	 * tokenize the text
+	 * 
+	 * @param text
+	 * @return
+	 */
 	public String tokenize(String text) {
 		Annotation document = new Annotation(text);
 		posPipeline.annotate(document);
@@ -144,12 +181,11 @@ public class CoreNLPTagger {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		
 		String text = "Early critics of Emily Dickinson's poetry %s for simplemindedness the surface of artlessness that in fact she constructed with such   %s  . ";
 		List<String> blank = new ArrayList<String>();
 		blank.add(" mistook  ");
 		blank.add(" astonishment ");
-		List<String> tags = CoreNLPTagger.getTagger().tag(text, blank);
+		List<String> tags = CoreNLPHelper.getHelper().tag(text, blank);
 		SparkUtils.outputText(tags);
 	}
 }
